@@ -18,11 +18,21 @@
 
 void confS1();
 void confLeds();
+void confBuzzer();
 void confMotionSensor();
 void confTimer();
 void initAlarmTimer();
 void deactivateAlarmTimer();
 void soundAlarm();
+
+#define BUFFER_SIZE 8
+
+typedef struct {
+    unsigned long idx;
+    uint8_t data[BUFFER_SIZE];
+} TransientBuffer;
+
+TransientBuffer rxBuff, txBuff;
 
 typedef uint8_t bool;
 
@@ -33,13 +43,55 @@ typedef struct {
 
 sensor motionSensor;
 
-uint8_t counter = 0, secondsPastDetection = 0, isr_flag_ch1 = 0;
+uint8_t counter = 0, secondsPastDetection = 0, isr_flag_ch1 = 0,
+        shouldSoundAlarm = 0;
+
+// SPI stuff
+typedef struct {
+    bool set_polarity;
+    uint8_t phase;
+    bool MSB_first;
+} spi_config;
+
+const spi_config masterSPIConfig = { .set_polarity = TRUE, .phase = 0,
+                                     .MSB_first = TRUE };
+
+const struct {
+    uint8_t Idle;
+    uint8_t Mem;
+    uint8_t GenerateRandomID;
+    uint8_t CalcCRC;
+    uint8_t Transmit;
+    uint8_t NoCmdChange;
+    uint8_t Receive;
+    uint8_t Transceive;
+    uint8_t MFAuthent;
+    uint8_t SoftReset;
+} MRFC_COMMAND = { .Idle = 0b0000, .Mem = 0b0001, .GenerateRandomID = 0b0010,
+                   .CalcCRC = 0b0011, .Transmit = 0b0100, .NoCmdChange = 0b0111,
+                   .Receive = 0b1000, .Transceive = 0b1100, .MFAuthent = 0b1110,
+                   .SoftReset = 0b1111 };
+
+/*const struct {
+
+} MRFC_REGS = {
+
+};*/
+
+void configSPI(spi_config *c);
+uint8_t spiTransfer(uint8_t byte);
 
 void initSensor(sensor *s, bool enabled);
+
+uint8_t first = 0, second = 0;
 
 int main(void) {
     WDTCTL = WDTPW | WDTHOLD;	// stop watchdog timer
 
+    initBuffer(&txBuff);
+    initBuffer(&rxBuff);
+
+    confBuzzer();
     confS1();
     confLeds();
     confMotionSensor();
@@ -48,7 +100,29 @@ int main(void) {
 
     __enable_interrupt();
 
-    soundAlarm();
+    configSPI(&masterSPIConfig);
+
+    uint16_t i = 0;
+    uint8_t data = 0x37;
+    volatile uint8_t j = 0;
+
+    P1DIR |= BIT3;
+    P1SEL |= BIT3;
+    P1OUT |= BIT3;
+
+    while (1) {
+        for(i = 0; i < BUFFER_SIZE; i++) {
+            P1OUT ^= BIT3;
+            spiTransfer(((data << 1) & 0x7E) | 0x80);
+            pushToBuffer(&txBuff, UCB0TXBUF);
+            pushToBuffer(&rxBuff, UCB0RXBUF);
+            spiTransfer(0);
+            pushToBuffer(&txBuff, UCB0TXBUF);
+            pushToBuffer(&rxBuff, UCB0RXBUF);
+            P1OUT ^= BIT3;
+        }
+        j++;
+    }
 
     while (1) {
         if (MOTION_DETECTED) {
@@ -60,9 +134,18 @@ int main(void) {
             }
             confTimer();
         }
+        if (shouldSoundAlarm) {
+            soundAlarm();
+            shouldSoundAlarm = 0;
+        }
     };
 
     return 0;
+}
+
+void confBuzzer() {
+    P2DIR |= BIT0;
+    P2SEL |= BIT0;
 }
 
 void confS1() {
@@ -75,7 +158,7 @@ void confS1() {
     P2IES |= BIT1;
 
     do {
-      P2IFG = 0;
+        P2IFG = 0;
     } while (P2IFG != 0);
 }
 
@@ -100,31 +183,30 @@ __interrupt void timer_a2_isr() {
     if (secondsPastDetection++ == 5) {
         secondsPastDetection = 0;
         deactivateAlarmTimer();
-        soundAlarm();
+        shouldSoundAlarm = 1;
     }
 }
 
 void soundAlarm() {
-    P2DIR |= BIT0;
-    P2SEL |= BIT0;
     TA1CTL = TASSEL__ACLK | ID__1 | MC__UP | TACLR;
-    const uint16_t highRef = 32768 / 264;
+    const uint16_t tone = 180;
+    const uint16_t highRef = 32768 / tone;
     const uint16_t lowRef = highRef / 2;
     TA1CCR0 = highRef;
     TA1CCR1 = lowRef;
     TA1CCTL1 = OUTMOD_7;
-    int16_t step = 2;
+    const int16_t step = 2;
     int16_t modifier = -step;
 
     while (!isr_flag_ch1) {
         LED_GREEN_TOGGLE;
         __delay_cycles(50000);
-        if (TA1CCR0 == highRef - step || TA1CCR0 == lowRef + step) {
+        if ((modifier > 0 && TA1CCR0 >= highRef - step)
+                || (modifier < 0 && TA1CCR0 <= lowRef + step)) {
             modifier *= -1;
-        }/* else if (TA1CCR0 == lowRef + 1) {
-            modifier *= -1;
-        }*/
+        }
         TA1CCR0 += modifier;
+        TA1CCR1 += modifier;
     }
     TA1CTL = TACLR;
     isr_flag_ch1 = 0;
@@ -176,6 +258,7 @@ __interrupt void s1_isr(void) {
     switch (P2IV) {
     case P2IV_P2IFG1:
         isr_flag_ch1 = 1;
+        deactivateAlarmTimer();
         break;
     case P2IV_P2IFG2:
         motionSensor.reading = TRUE;
@@ -185,4 +268,60 @@ __interrupt void s1_isr(void) {
     default:
         break;
     }
+}
+
+// P3.0-P3.2
+void configSPI(spi_config *c) {
+    // desliga o modulo
+    UCB0CTL1 = UCSWRST;
+
+    UCB0CTL0 = UCMODE_0 | UCSYNC;
+
+    UCB0CTL1 |= UCSSEL__SMCLK;
+    UCB0BRW = 10000;
+
+    UCB0CTL0 |= UCMST;
+
+    if (c->set_polarity)
+    UCB0CTL0 |= UCCKPL;
+    if (c->phase)
+    UCB0CTL0 |= UCCKPH;
+    if (c->MSB_first)
+    UCB0CTL0 |= UCMSB;
+
+    P3SEL |= BIT0 | BIT1;
+
+    UCB0CTL1 &= ~UCSWRST;
+    generateSPIClock();
+
+    //UCB0IE = UCTXIE;// | UCRXIE;
+}
+
+void generateSPIClock() {
+    TA0CTL = TASSEL__SMCLK | ID__1 | MC__UP | TACLR;
+    TA0CCR0 = 5000;
+    TA0CCR1 = TA0CCR0 / 2;
+    TA0CCTL1 = OUTMOD_7;
+}
+
+uint8_t spiTransfer(uint8_t byte) {
+    while ((UCB0IFG & UCTXIFG) == 0);
+    UCB0TXBUF = byte;
+
+    while ((UCB0IFG & UCRXIFG) == 0);
+    return UCB0RXBUF;
+}
+
+void initBuffer(TransientBuffer *buf) {
+    buf->idx = 0;
+
+    unsigned long i = 0;
+    for (i = 0; i < BUFFER_SIZE; i++)
+        buf->data[i] = 0;
+}
+
+void pushToBuffer(TransientBuffer *buf, uint8_t val) {
+    unsigned long currentIndex = buf->idx;
+    buf->data[currentIndex] = val;
+    buf->idx = (currentIndex + 1) % BUFFER_SIZE;
 }
