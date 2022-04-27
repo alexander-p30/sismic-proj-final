@@ -1,7 +1,7 @@
 ******************************************************************************
                   MSP430 Linker Unix v21.6.0                   
 ******************************************************************************
->> Linked Tue Apr 26 19:47:58 2022
+>> Linked Wed Apr 27 07:55:48 2022
 
 OUTPUT FILE NAME:   <labprojetofinal.out>
 ENTRY POINT SYMBOL: "_c_int00_noargs"  address: 00004472
@@ -85,7 +85,7 @@ MEMORY CONFIGURATION
   INT61                 0000fffa   00000002  00000002  00000000  RWIX
   INT62                 0000fffc   00000002  00000002  00000000  RWIX
   RESET                 0000fffe   00000002  00000002  00000000  RWIX
-  FLASH2                00010000   000143f8  0000034e  000140aa  RWIX
+  FLASH2                00010000   000143f8  00000356  000140a2  RWIX
 
 
 SECTION ALLOCATION MAP
@@ -205,38 +205,38 @@ SYSNMI     0    0000fffc    00000002
 .reset     0    0000fffe    00000002     
                   0000fffe    00000002     rts430x_lc_rd_eabi.lib : boot.c.obj (.reset)
 
-.text      0    00010000    0000034e     
+.text      0    00010000    00000356     
                   00010000    000000bc     main.obj (.text:main)
                   000100bc    00000076     rts430x_lc_rd_eabi.lib : copy_decompress_lzss.c.obj (.text:decompress:lzss:__TI_decompress_lzss)
                   00010132    00000054                            : autoinit.c.obj (.text:__TI_auto_init_nobinit_nopinit_hold_wdt:__TI_auto_init_nobinit_nopinit_hold_wdt)
                   00010186    0000004c     main.obj (.text:configSPI)
-                  000101d2    00000026     main.obj (.text:initBuffer)
-                  000101f8    00000024     main.obj (.text:confMotionSensor)
-                  0001021c    00000024     main.obj (.text:confS1)
-                  00010240    00000024     rts430x_lc_rd_eabi.lib : copy_zero_init.c.obj (.text:decompress:ZI:__TI_zero_init_nomemset:__TI_zero_init_nomemset)
-                  00010264    00000022     main.obj (.text:pushToBuffer)
-                  00010286    00000020     main.obj (.text:confLeds)
-                  000102a6    0000001e     main.obj (.text:generateSPIClock)
-                  000102c4    00000016     main.obj (.text:spiTransfer)
-                  000102da    00000014     main.obj (.text:confTimer)
-                  000102ee    00000014     main.obj (.text:initAlarmTimer)
-                  00010302    00000014     rts430x_lc_rd_eabi.lib : memcpy.c.obj (.text:memcpy)
-                  00010316    00000012                            : copy_decompress_none.c.obj (.text:decompress:none:__TI_decompress_none)
-                  00010328    0000000a     main.obj (.text:confBuzzer)
-                  00010332    0000000a     main.obj (.text:initSensor)
-                  0001033c    00000006     rts430x_lc_rd_eabi.lib : exit.c.obj (.text:abort)
-                  00010342    00000006     main.obj (.text:deactivateAlarmTimer)
-                  00010348    00000004     rts430x_lc_rd_eabi.lib : pre_init.c.obj (.text:_system_pre_init)
-                  0001034c    00000002                            : startup.c.obj (.text:_system_post_cinit)
+                  000101d2    00000026     main.obj (.text:generateSPIClock)
+                  000101f8    00000026     main.obj (.text:initBuffer)
+                  0001021e    00000024     main.obj (.text:confMotionSensor)
+                  00010242    00000024     main.obj (.text:confS1)
+                  00010266    00000024     rts430x_lc_rd_eabi.lib : copy_zero_init.c.obj (.text:decompress:ZI:__TI_zero_init_nomemset:__TI_zero_init_nomemset)
+                  0001028a    00000022     main.obj (.text:pushToBuffer)
+                  000102ac    00000020     main.obj (.text:confLeds)
+                  000102cc    00000016     main.obj (.text:spiTransfer)
+                  000102e2    00000014     main.obj (.text:confTimer)
+                  000102f6    00000014     main.obj (.text:initAlarmTimer)
+                  0001030a    00000014     rts430x_lc_rd_eabi.lib : memcpy.c.obj (.text:memcpy)
+                  0001031e    00000012                            : copy_decompress_none.c.obj (.text:decompress:none:__TI_decompress_none)
+                  00010330    0000000a     main.obj (.text:confBuzzer)
+                  0001033a    0000000a     main.obj (.text:initSensor)
+                  00010344    00000006     rts430x_lc_rd_eabi.lib : exit.c.obj (.text:abort)
+                  0001034a    00000006     main.obj (.text:deactivateAlarmTimer)
+                  00010350    00000004     rts430x_lc_rd_eabi.lib : pre_init.c.obj (.text:_system_pre_init)
+                  00010354    00000002                            : startup.c.obj (.text:_system_post_cinit)
 
 MODULE SUMMARY
 
        Module                       code   ro data   rw data
        ------                       ----   -------   -------
     ./
-       main.obj                     672    9         32     
+       main.obj                     680    9         32     
     +--+----------------------------+------+---------+---------+
-       Total:                       672    9         32     
+       Total:                       680    9         32     
                                                             
     /home/alexander/Documents/ti/ccs1110/ccs/tools/compiler/ti-cgt-msp430_21.6.0.LTS/lib/rts430x_lc_rd_eabi.lib
        copy_decompress_lzss.c.obj   118    0         0      
@@ -274,7 +274,7 @@ MODULE SUMMARY
        Stack:                       0      0         160    
        Linker Generated:            0      41        0      
     +--+----------------------------+------+---------+---------+
-       Grand Total:                 996    90        192    
+       Grand Total:                 1004   90        192    
 
 
 LINKER GENERATED COPY TABLES
@@ -378,7 +378,7 @@ address   name
 00000732  ADC12MEM9                              
 00000733  ADC12MEM9_H                            
 00000732  ADC12MEM9_L                            
-0001033c  C$$EXIT                                
+00010344  C$$EXIT                                
 000008c0  CBCTL0                                 
 000008c1  CBCTL0_H                               
 000008c0  CBCTL0_L                               
@@ -1037,7 +1037,7 @@ address   name
 0000448e  __TI_ISR_TRAP                          
 00010132  __TI_auto_init_nobinit_nopinit_hold_wdt
 000100bc  __TI_decompress_lzss                   
-00010316  __TI_decompress_none                   
+0001031e  __TI_decompress_none                   
 0000ffd2  __TI_int41                             
 0000ffd4  __TI_int42                             
 0000ffd6  __TI_int43                             
@@ -1063,39 +1063,39 @@ address   name
 ffffffff  __TI_pprof_out_hndl                    
 ffffffff  __TI_prof_data_size                    
 ffffffff  __TI_prof_data_start                   
-00010240  __TI_zero_init_nomemset                
+00010266  __TI_zero_init_nomemset                
 ffffffff  __c_args__                             
 00004472  _c_int00_noargs                        
 0000fffe  _reset_vector                          
 00004360  _stack                                 
-0001034c  _system_post_cinit                     
-00010348  _system_pre_init                       
-0001033c  abort                                  
-00010328  confBuzzer                             
-00010286  confLeds                               
-000101f8  confMotionSensor                       
-0001021c  confS1                                 
-000102da  confTimer                              
+00010354  _system_post_cinit                     
+00010350  _system_pre_init                       
+00010344  abort                                  
+00010330  confBuzzer                             
+000102ac  confLeds                               
+0001021e  confMotionSensor                       
+00010242  confS1                                 
+000102e2  confTimer                              
 00010186  configSPI                              
 0000241a  counter                                
-00010342  deactivateAlarmTimer                   
+0001034a  deactivateAlarmTimer                   
 0000241e  first                                  
-000102a6  generateSPIClock                       
-000102ee  initAlarmTimer                         
-000101d2  initBuffer                             
-00010332  initSensor                             
+000101d2  generateSPIClock                       
+000102f6  initAlarmTimer                         
+000101f8  initBuffer                             
+0001033a  initSensor                             
 0000241c  isr_flag_ch1                           
 00010000  main                                   
 00004496  masterSPIConfig                        
-00010302  memcpy                                 
+0001030a  memcpy                                 
 00002418  motionSensor                           
-00010264  pushToBuffer                           
+0001028a  pushToBuffer                           
 00002400  rxBuff                                 
 00004400  s1_isr                                 
 0000241f  second                                 
 0000241b  secondsPastDetection                   
 0000241d  shouldSoundAlarm                       
-000102c4  spiTransfer                            
+000102cc  spiTransfer                            
 0000442a  timer_a2_isr                           
 0000444e  timer_b0_isr                           
 0000240c  txBuff                                 
@@ -1885,25 +1885,25 @@ address   name
 000100bc  __TI_decompress_lzss                   
 00010132  __TI_auto_init_nobinit_nopinit_hold_wdt
 00010186  configSPI                              
-000101d2  initBuffer                             
-000101f8  confMotionSensor                       
-0001021c  confS1                                 
-00010240  __TI_zero_init_nomemset                
-00010264  pushToBuffer                           
-00010286  confLeds                               
-000102a6  generateSPIClock                       
-000102c4  spiTransfer                            
-000102da  confTimer                              
-000102ee  initAlarmTimer                         
-00010302  memcpy                                 
-00010316  __TI_decompress_none                   
-00010328  confBuzzer                             
-00010332  initSensor                             
-0001033c  C$$EXIT                                
-0001033c  abort                                  
-00010342  deactivateAlarmTimer                   
-00010348  _system_pre_init                       
-0001034c  _system_post_cinit                     
+000101d2  generateSPIClock                       
+000101f8  initBuffer                             
+0001021e  confMotionSensor                       
+00010242  confS1                                 
+00010266  __TI_zero_init_nomemset                
+0001028a  pushToBuffer                           
+000102ac  confLeds                               
+000102cc  spiTransfer                            
+000102e2  confTimer                              
+000102f6  initAlarmTimer                         
+0001030a  memcpy                                 
+0001031e  __TI_decompress_none                   
+00010330  confBuzzer                             
+0001033a  initSensor                             
+00010344  C$$EXIT                                
+00010344  abort                                  
+0001034a  deactivateAlarmTimer                   
+00010350  _system_pre_init                       
+00010354  _system_post_cinit                     
 ffffffff  __TI_pprof_out_hndl                    
 ffffffff  __TI_prof_data_size                    
 ffffffff  __TI_prof_data_start                   

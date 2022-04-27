@@ -121,7 +121,7 @@ int main(void) {
             pushToBuffer(&rxBuff, UCB0RXBUF);
             P1OUT ^= BIT3;
         }
-        j++;
+         j++;
     }
 
     while (1) {
@@ -278,7 +278,7 @@ void configSPI(spi_config *c) {
     UCB0CTL0 = UCMODE_0 | UCSYNC;
 
     UCB0CTL1 |= UCSSEL__SMCLK;
-    UCB0BRW = 10000;
+    UCB0BRW = 6000;
 
     UCB0CTL0 |= UCMST;
 
@@ -298,8 +298,11 @@ void configSPI(spi_config *c) {
 }
 
 void generateSPIClock() {
+    P1DIR |= BIT2;
+    P1SEL |= BIT2;
+
     TA0CTL = TASSEL__SMCLK | ID__1 | MC__UP | TACLR;
-    TA0CCR0 = 5000;
+    TA0CCR0 = 3000;
     TA0CCR1 = TA0CCR0 / 2;
     TA0CCTL1 = OUTMOD_7;
 }
