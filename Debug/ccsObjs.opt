@@ -1,1 +1,1 @@
-"./main.obj" "../lnk_msp430f5529.cmd" -llibmath.a -llibc.a 
+"./main.obj" "./src/mrfc.obj" "./src/transient_buffer.obj" "../lnk_msp430f5529.cmd" -llibmath.a -llibc.a 
