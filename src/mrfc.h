@@ -33,6 +33,12 @@ uint8_t spiTransfer(uint8_t byte);
 // |                 MRFC                 |
 // ========================================
 
+struct _PICC_COMMANDS {
+    uint8_t ReqA;
+};
+
+extern const struct _PICC_COMMANDS PICC_COMMAND;
+
 struct _MRFC_COMMANDS {
     uint8_t Idle;
     uint8_t Mem;
@@ -77,7 +83,7 @@ extern const struct _MRFC_REGISTERS MRFC_REGISTER;
 void confMRFC();
 uint8_t MRFCGetRegister(uint8_t reg);
 void MRFCSetRegister(uint8_t reg, uint8_t value);
-int8_t MRFCRequest();
+uint8_t MRFCDetectPICC();
 void MRFCTest();
 
 #endif

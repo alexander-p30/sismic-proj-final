@@ -56,28 +56,15 @@ int main(void) {
     confS1();
     confLeds();
     confMotionSensor();
+
     confMRFC();
 
     __enable_interrupt();
 
-    /*
-    pushToBuffer(&rxBuff, MRFCGetRegister(MRFC_REGISTER.Command));
-    pushToBuffer(&rxBuff, MRFCGetRegister(MRFC_REGISTER.TMode)); //Tauto=1; f(Timer) = 6.78MHz/TPreScaler
-    pushToBuffer(&rxBuff, MRFCGetRegister(MRFC_REGISTER.TPrescaler));  //TModeReg[3..0] + TPrescalerReg
-    pushToBuffer(&rxBuff, MRFCGetRegister(MRFC_REGISTER.TReloadLB));
-    pushToBuffer(&rxBuff, MRFCGetRegister(MRFC_REGISTER.TReloadHB));
-    pushToBuffer(&rxBuff, MRFCGetRegister(MRFC_REGISTER.TxASK));    //100%ASK
-    pushToBuffer(&rxBuff, MRFCGetRegister(MRFC_REGISTER.Mode));
-    */
-
-    MRFCTest();
-
     volatile int x;
     while(1) {
-        x = MRFCRequest();
-        pushToBuffer(&rxBuff, x);
-        if(x > 0)
-            x++;
+      if(MRFCDetectPICC())
+        LED_RED_TOGGLE;
     }
 
     while (1) {
