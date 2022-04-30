@@ -70,6 +70,8 @@ int main(void) {
     pushToBuffer(&rxBuff, MRFCGetRegister(MRFC_REGISTER.Mode));
     */
 
+    MRFCTest();
+
     volatile int x;
     while(1) {
         x = MRFCRequest();

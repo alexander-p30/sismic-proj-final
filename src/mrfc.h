@@ -66,8 +66,9 @@ struct _MRFC_REGISTERS {
     uint8_t TxControl;
     uint8_t TxASK;
     uint8_t TPrescaler;
-    uint8_t TReloadLB;
     uint8_t TReloadHB;
+    uint8_t TReloadLB;
+    uint8_t AutoTest;
     uint8_t Version;
 };
 
@@ -77,5 +78,6 @@ void confMRFC();
 uint8_t MRFCGetRegister(uint8_t reg);
 void MRFCSetRegister(uint8_t reg, uint8_t value);
 int8_t MRFCRequest();
+void MRFCTest();
 
 #endif

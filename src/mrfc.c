@@ -62,9 +62,9 @@ const struct _MRFC_REGISTERS MRFC_REGISTER = { .Command = 0x01, .ComIEn = 0x02,
                                                .TxMode = 0x12, .RxMode = 0x13,
                                                .TxControl = 0x14, .TxASK = 0x15,
                                                .ModWidth = 0x24, .TMode = 0x2A,
-                                               .TPrescaler = 0x2B, .TReloadLB =
+                                               .TPrescaler = 0x2B, .TReloadHB =
                                                        0x2C,
-                                               .TReloadHB = 0x2D, .Version =
+                                               .TReloadLB = 0x2D, .AutoTest = 0x36, .Version =
                                                        0x37 };
 // internal alias
 const struct _MRFC_REGISTERS *REG = &MRFC_REGISTER;
@@ -84,10 +84,12 @@ void confMRFC() {
 
     configSPI(&masterSPIConfig);
 
-    MRFCSetRegister(REG->Command, CMD->SoftReset);
-    MRFCSetRegister(REG->TxMode, 0x00);
-    MRFCSetRegister(REG->RxMode, 0x00);
+    MRFCSetRegister(REG->TxMode, 0);
+    MRFCSetRegister(REG->RxMode, 0);
+
     MRFCSetRegister(REG->ModWidth, 0x26);
+
+    MRFCSetRegister(REG->Command, CMD->SoftReset);
     MRFCSetRegister(REG->TMode, 0x80); //Tauto=1; f(Timer) = 6.78MHz/TPreScaler
     MRFCSetRegister(REG->TPrescaler, 0xA9);  //TModeReg[3..0] + TPrescalerReg
     MRFCSetRegister(REG->TReloadLB, 0xE8);
@@ -97,12 +99,60 @@ void confMRFC() {
     MRFCSetRegister(REG->Mode, 0x3D);
 
     // turn antenna on
-    unsigned char temp;
+    volatile unsigned char temp;
 
     temp = MRFCGetRegister(REG->TxControl);
     if (!(temp & 0x03)) {
         MRFCSetRegister(REG->TxControl, temp | 0x03);  // set bit mask
     }
+}
+
+void MRFCTest() {
+    MRFCSetRegister(REG->Command, CMD->SoftReset);
+
+    // 2. Clear the internal buffer by writing 25 bytes of 00h
+    uint8_t i = 0;
+    MRFCSetRegister(REG->FIFOLevel, 0x80);    // flush the FIFO buffer
+    for(i = 0; i < 25; i++) {
+        MRFCSetRegister(REG->FIFOData, 0); // write 25 bytes of 00h to FIFO
+    }
+    MRFCSetRegister(REG->Command, CMD->Mem);   // transfer to internal buffer
+
+    // 3. Enable self-test
+    MRFCSetRegister(REG->AutoTest, 0x09);
+
+    // 4. Write 00h to FIFO buffer
+    MRFCSetRegister(REG->FIFOData, 0x00);
+
+    // 5. Start self-test by issuing the CalcCRC command
+    MRFCSetRegister(REG->Command, CMD->CalcCRC);
+
+    // 6. Wait for self-test to complete
+    uint8_t n;
+    for (i = 0; i < 0xFF; i++) {
+      // The datasheet does not specify exact completion condition except
+      // that FIFO buffer should contain 64 bytes.
+      // While selftest is initiated by CalcCRC command
+      // it behaves differently from normal CRC computation,
+      // so one can't reliably use DivIrqReg to check for completion.
+      // It is reported that some devices does not trigger CRCIRq flag
+      // during selftest.
+      n = MRFCGetRegister(REG->FIFOLevel);
+      if (n >= 64) {
+        break;
+      }
+    }
+    MRFCSetRegister(REG->Command, CMD->Idle);    // Stop calculating CRC for new content in the FIFO.
+
+    // 7. Read out resulting 64 bytes from the FIFO buffer.
+    volatile uint8_t result[64];
+    for(i = 0; i < 64; i++) {
+        result[i] = MRFCGetRegister(REG->FIFOData);
+    }
+
+    // Auto self-test done
+    // Reset AutoTestReg register to be 0 again. Required for normal operation.
+    MRFCSetRegister(REG->AutoTest, 0x00);
 }
 
 void __setSS() {
@@ -141,11 +191,12 @@ void MRFCSetRegister(uint8_t reg, uint8_t value) {
 
 
 #define PICC_REQA 0x26
+#define PICC_WUPA 0x52
 int8_t MRFCRequest() {
 
     MRFCSetRegister(REG->Coll, 0b10000000);
 
-    uint8_t validBits = 0;
+    uint8_t validBits = 7;
     uint8_t backData[100] = { 0 };
     uint8_t backLen = 100;
     uint8_t sendData = PICC_REQA;
@@ -153,15 +204,16 @@ int8_t MRFCRequest() {
     uint8_t waitIRq = 0x30;    // RxIRq and IdleIRq
     uint8_t checkCRC = 0;
 
+    //MRFCSetRegister(REG->ComIEn, 0x77 | 0x80);
+    volatile uint8_t ien = MRFCGetRegister(REG->ComIEn);
+
     MRFCSetRegister(REG->Command, CMD->Idle);      // Stop any active command.
-    MRFCSetRegister(REG->ComIrq, 0b1111111); // Clear all seven interrupt request bits
-    MRFCSetRegister(REG->FIFOLevel, 0b10000000); // FlushBuffer = 1, FIFO initialization
+    MRFCSetRegister(REG->ComIrq, 0x7F); // Clear all seven interrupt request bits
+    MRFCSetRegister(REG->FIFOLevel, 0x80); // FlushBuffer = 1, FIFO initialization
     MRFCSetRegister(REG->FIFOData, sendData);  // Write sendData to the FIFO
     MRFCSetRegister(REG->BitFraming, validBits);   // Bit adjustments
     MRFCSetRegister(REG->Command, command);       // Execute the command
-    if (command == CMD->Transceive) {
-        MRFCSetRegister(REG->BitFraming, 0b10000000); // StartSend=1, transmission of data starts
-    }
+        MRFCSetRegister(REG->BitFraming, 0x80); // StartSend=1, transmission of data starts
 
     // In PCD_Init() we set the TAuto flag in TModeReg. This means the timer
     // automatically starts when the PCD stops transmitting.
@@ -237,5 +289,5 @@ int8_t MRFCRequest() {
     }
 
     return 0;
-} // End PCD_CommunicateWithPICC()
+}
 
