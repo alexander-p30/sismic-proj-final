@@ -3,6 +3,11 @@
 #include <msp430.h>
 #include <stdint.h>
 
+//MF522 - Status
+#define MI_OK                 0
+#define MI_NOTAGERR           1
+#define MI_ERR                2
+
 // Port mapping:
 // P3.0 = MOSI
 // P3.1 = MISO
@@ -44,13 +49,33 @@ struct _MRFC_COMMANDS {
 extern const struct _MRFC_COMMANDS MRFC_COMMAND;
 
 struct _MRFC_REGISTERS {
+    uint8_t Command;
+    uint8_t ComIEn;
+    uint8_t ComIrq;
+    uint8_t Error;
+    uint8_t FIFOData;
+    uint8_t FIFOLevel;
+    uint8_t Control;
+    uint8_t BitFraming;
+    uint8_t Coll;
+    uint8_t Mode;
+    uint8_t TxMode;
+    uint8_t RxMode;
+    uint8_t ModWidth;
+    uint8_t TMode;
+    uint8_t TxControl;
+    uint8_t TxASK;
+    uint8_t TPrescaler;
+    uint8_t TReloadLB;
+    uint8_t TReloadHB;
     uint8_t Version;
 };
 
 extern const struct _MRFC_REGISTERS MRFC_REGISTER;
 
-void configMRFC();
-uint8_t MRFCReadRegister(uint8_t reg);
-void MRFCWriteRegister(uint8_t reg, uint8_t value);
+void confMRFC();
+uint8_t MRFCGetRegister(uint8_t reg);
+void MRFCSetRegister(uint8_t reg, uint8_t value);
+int8_t MRFCRequest();
 
 #endif

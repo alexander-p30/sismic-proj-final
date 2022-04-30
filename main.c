@@ -22,18 +22,27 @@ void confLeds();
 
 void confS1();
 
-#define MOTION_DETECTED (P2IN & BIT2)
+// ========================================
+// |                Alarm                 |
+// ========================================
 
-void confMotionSensor();
-void confTimer();
 void confBuzzer();
 void initAlarmTimer();
 void deactivateAlarmTimer();
 void soundAlarm();
 
+// ========================================
+// |            Motion Sensor             |
+// ========================================
+
+#define MOTION_DETECTED (P2IN & BIT2)
+
+void confMotionSensor();
+void confMotionSensorPrepareTimer();
+
 typedef uint8_t bool;
 
-uint8_t counter = 0, secondsPastDetection = 0, isr_flag_ch1 = 0,
+uint8_t halfSecondsCounter = 0, secondsPastDetection = 0, shouldDeactivateAlarm = 0,
         shouldSoundAlarm = 0;
 
 TransientBuffer rxBuff;
@@ -47,14 +56,27 @@ int main(void) {
     confS1();
     confLeds();
     confMotionSensor();
-    confTimer();
+    confMRFC();
 
     __enable_interrupt();
 
-    configMRFC();
+    /*
+    pushToBuffer(&rxBuff, MRFCGetRegister(MRFC_REGISTER.Command));
+    pushToBuffer(&rxBuff, MRFCGetRegister(MRFC_REGISTER.TMode)); //Tauto=1; f(Timer) = 6.78MHz/TPreScaler
+    pushToBuffer(&rxBuff, MRFCGetRegister(MRFC_REGISTER.TPrescaler));  //TModeReg[3..0] + TPrescalerReg
+    pushToBuffer(&rxBuff, MRFCGetRegister(MRFC_REGISTER.TReloadLB));
+    pushToBuffer(&rxBuff, MRFCGetRegister(MRFC_REGISTER.TReloadHB));
+    pushToBuffer(&rxBuff, MRFCGetRegister(MRFC_REGISTER.TxASK));    //100%ASK
+    pushToBuffer(&rxBuff, MRFCGetRegister(MRFC_REGISTER.Mode));
+    */
 
-    uint16_t i = 0;
-    volatile uint8_t j = 0;
+    volatile int x;
+    while(1) {
+        x = MRFCRequest();
+        pushToBuffer(&rxBuff, x);
+        if(x > 0)
+            x++;
+    }
 
     while (1) {
         if (MOTION_DETECTED) {
@@ -64,7 +86,7 @@ int main(void) {
                 LED_RED_OFF;
                 __delay_cycles(100000);
             }
-            confTimer();
+            confMotionSensorPrepareTimer();
         }
         if (shouldSoundAlarm) {
             soundAlarm();
@@ -126,7 +148,7 @@ void soundAlarm() {
     const int16_t step = 1;
     int16_t modifier = -step;
 
-    while (!isr_flag_ch1) {
+    while (!shouldDeactivateAlarm) {
         __delay_cycles(2000);
         if ((modifier > 0 && TA1CCR0 >= highRef - step)
                 || (modifier < 0 && TA1CCR0 <= lowRef + step)) {
@@ -136,7 +158,7 @@ void soundAlarm() {
         TA1CCR1 += modifier;
     }
     TA1CTL = TACLR;
-    isr_flag_ch1 = 0;
+    shouldDeactivateAlarm = 0;
     LED_GREEN_ON;
 }
 
@@ -147,7 +169,6 @@ void confS1() {
     P2OUT |= BIT1;
 
     P2IE |= BIT1;
-    P2IES |= BIT1;
 
     do {
         P2IFG = 0;
@@ -158,8 +179,10 @@ void confS1() {
 __interrupt void s1_isr(void) {
     switch (P2IV) {
     case P2IV_P2IFG1:
-        isr_flag_ch1 = 1;
-        deactivateAlarmTimer();
+        if(!shouldDeactivateAlarm) {
+            shouldDeactivateAlarm = 1;
+            deactivateAlarmTimer();
+        }
         break;
     case P2IV_P2IFG2:
         LED_GREEN_OFF;
@@ -173,6 +196,7 @@ __interrupt void s1_isr(void) {
 // ========================================
 // |            Motion Sensor             |
 // ========================================
+
 void confMotionSensor() {
     P2SEL &= ~BIT2;
     P2DIR &= ~BIT2;
@@ -187,7 +211,7 @@ void confMotionSensor() {
     } while (P2IFG != 0);
 }
 
-void confTimer() {
+void confMotionSensorPrepareTimer() {
     TB0CTL = TBSSEL__ACLK | ID__1 | MC__UP | TBCLR;
     TB0CCTL0 = CCIE;
     TB0CCR0 = 32768 >> 1;
@@ -196,9 +220,9 @@ void confTimer() {
 // turns led green on when motion sensor is ready again
 #pragma vector = TIMER0_B0_VECTOR
 __interrupt void motion_sensor_readiness() {
-    if (counter++ == 8) {
+    if (halfSecondsCounter++ == 8) {
         TB0CTL = TBCLR;
         LED_GREEN_ON;
-        counter = 0;
+        halfSecondsCounter = 0;
     }
 }
