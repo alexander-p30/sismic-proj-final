@@ -98,10 +98,12 @@ void confMRFC() {
     MRFCSetRegBits(REG.TxControl, 0x03);
 }
 
+// set slave select
 void __setSS() {
     P1OUT &= ~BIT3;
 }
 
+// unset slave select
 void __unsetSS() {
     P1OUT |= BIT3;
 }
@@ -132,6 +134,7 @@ void MRFCSetRegister(uint8_t reg, uint8_t value) {
     __unsetSS();
 }
 
+// sets up interruptions, clears FIFO buffer and puts module at idle state
 void __prepareTransmission(uint8_t interruptMask) {
     MRFCSetRegister(REG.ComIEn, interruptMask | 0x80);
     MRFCUnsetRegBits(REG.ComIrq, 0x80);

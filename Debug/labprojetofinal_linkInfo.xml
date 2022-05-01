@@ -2,7 +2,7 @@
 <link_info>
    <banner>MSP430 Linker Unix v21.6.0.LTS</banner>
    <copyright>Copyright (c) 2003-2018 Texas Instruments Incorporated</copyright>
-   <link_time>0x626ecb83</link_time>
+   <link_time>0x626ecbee</link_time>
    <link_errors>0x0</link_errors>
    <output_file>labprojetofinal.out</output_file>
    <entry_point>
