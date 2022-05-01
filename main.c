@@ -47,6 +47,9 @@ uint8_t halfSecondsCounter = 0, secondsPastDetection = 0,
 
 TransientBuffer rxBuff;
 
+PICC_UID lastReadUID;
+PICC_UID samplePICC_UID();
+
 int main(void) {
     WDTCTL = WDTPW | WDTHOLD;	// stop watchdog timer
 
@@ -61,13 +64,14 @@ int main(void) {
 
     __enable_interrupt();
 
-    ATQA atqa;
-    UID uid;
-    while (1) {
-        if (MRFCDetectPICC()) {
-            uid = MRFCReadPICC();
-        }
-    }
+    /* while (1) { */
+    /*     if (MRFCDetectPICC()) { */
+    /*         lastReadUID = MRFCReadPICC(); */
+    /*         volatile uint8_t x; */
+    /*         if(lastReadUID.received && MRFCCheckAdminPICC_UID(&lastReadUID)) */
+    /*             x = lastReadUID.size; */
+    /*     } */
+    /* } */
 
     while (1) {
         if (MOTION_DETECTED) {
@@ -121,7 +125,7 @@ void deactivateAlarmTimer() {
 
 #pragma vector = TIMER2_A0_VECTOR
 __interrupt void timer_a2_isr() {
-    if (secondsPastDetection++ == 5) {
+    if (secondsPastDetection++ == 1) {
         secondsPastDetection = 0;
         deactivateAlarmTimer();
         shouldSoundAlarm = 1;
@@ -166,13 +170,34 @@ void confS1() {
     } while (P2IFG != 0);
 }
 
+PICC_UID uidOversampling[100];
 #pragma vector = PORT2_VECTOR;
 __interrupt void s1_isr(void) {
     switch (P2IV) {
     case P2IV_P2IFG1:
-        if (!shouldDeactivateAlarm) {
-            shouldDeactivateAlarm = 1;
-            deactivateAlarmTimer();
+        if(shouldSoundAlarm) {
+            if(!shouldDeactivateAlarm) {
+                shouldDeactivateAlarm = 1;
+                deactivateAlarmTimer();
+            }
+            break;
+        } else {
+            while(!MRFCDetectPICC());
+
+            PICC_UID uid = { .received = 0 };
+
+            while(!uid.received)
+                uid = MRFCReadPICC();
+
+            if(MRFCCheckAdminPICC_UID(&uid)) {
+              LED_RED_ON;
+              while(MRFCDetectPICC());
+              LED_RED_OFF;
+              while(!MRFCDetectPICC());
+              uid = samplePICC_UID();
+              MRFCRegisterPICC_UID(uid);
+            }
+
         }
         break;
     case P2IV_P2IFG2:
@@ -182,6 +207,51 @@ __interrupt void s1_isr(void) {
     default:
         break;
     }
+}
+
+PICC_UID samplePICC_UID() {
+  const uint8_t sampleCount = 100;
+  uint8_t byteFrequencies[MAX_PICC_UID_SIZE][256] = {{ 0 }};
+  uint8_t sizeFrequencies[7] = { 0 };
+  uint8_t j, i;
+
+  for(i = 0; i < sampleCount; i++) {
+    LED_GREEN_OFF;
+    LED_RED_OFF;
+    while(MRFCDetectPICC());
+    LED_GREEN_ON;
+    uidOversampling[i].received = 0;
+    while(!uidOversampling[i].received) {
+      uidOversampling[i] = MRFCReadPICC();
+    }
+    LED_RED_ON;
+
+    sizeFrequencies[uidOversampling[i].size]++;
+
+    for(j = 0; j < uidOversampling[i].size; j++)
+      byteFrequencies[j][uidOversampling->data[j]]++;
+  }
+
+  uint8_t mostFrequentUIDSizeFreq = 0, mostFrequentUIDSize = 0;
+
+  for(i = 0; i < 7; i++) {
+    if(sizeFrequencies[i] > mostFrequentUIDSizeFreq)
+      mostFrequentUIDSize = i + 4;
+  }
+
+  PICC_UID mostFrequentUID = { .received = 1, .size = mostFrequentUIDSize };
+  for(j = 0; j < mostFrequentUID.size; j++) {
+    uint8_t m;
+    uint8_t mostFrequentByteFreq = 0, mostFrequentByte = 0;
+    for(m = 0; m < 256; m++) {
+      if(byteFrequencies[j][m] > mostFrequentByteFreq)
+        mostFrequentByteFreq = byteFrequencies[j][m];
+        mostFrequentByte = m;
+    }
+    mostFrequentUID.data[j] = mostFrequentByte;
+  }
+
+  return mostFrequentUID;
 }
 
 // ========================================
