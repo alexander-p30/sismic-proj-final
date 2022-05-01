@@ -77,7 +77,6 @@ void confMRFC() {
     P1DIR |= BIT4;
     P1OUT |= BIT4;
 
-    // TODO: test lower brw values
     const spi_config masterSPIConfig = { .polarity = 0, .phase = 1, .MSB_first =
                                                  1,
                                          .brw = 2 };
@@ -88,12 +87,12 @@ void confMRFC() {
 
     MRFCSetRegister(REG.Command, CMD.SoftReset);
 
-    MRFCSetRegister(REG.TMode, 0x8D); //Tauto=1; f(Timer) = 6.78MHz/TPreScaler
-    MRFCSetRegister(REG.TPrescaler, 0x3E);  //TModeReg[3..0] + TPrescalerReg
+    MRFCSetRegister(REG.TMode, 0x8D);
+    MRFCSetRegister(REG.TPrescaler, 0x3E);
     MRFCSetRegister(REG.TReloadLB, 30);
     MRFCSetRegister(REG.TReloadHB, 0);
 
-    MRFCSetRegister(REG.TxASK, 0x40);    //100%ASK
+    MRFCSetRegister(REG.TxASK, 0x40);
     MRFCSetRegister(REG.Mode, 0x3D);
 
     MRFCSetRegBits(REG.TxControl, 0x03);

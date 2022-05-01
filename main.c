@@ -64,6 +64,8 @@ int main(void) {
 
     __enable_interrupt();
 
+    soundAlarm();
+
     /* while (1) { */
     /*     if (MRFCDetectPICC()) { */
     /*         lastReadUID = MRFCReadPICC(); */
@@ -151,6 +153,13 @@ void soundAlarm() {
         }
         TA1CCR0 += modifier;
         TA1CCR1 += modifier;
+        if (MRFCDetectPICC()) {
+          lastReadUID = MRFCReadPICC();
+          if(lastReadUID.received && MRFCCheckRegisteredPICC_UID(&lastReadUID)) {
+            shouldDeactivateAlarm = 1;
+            deactivateAlarmTimer();
+          }
+        }
     }
     TA1CTL = TACLR;
     shouldDeactivateAlarm = 0;
@@ -181,23 +190,6 @@ __interrupt void s1_isr(void) {
                 deactivateAlarmTimer();
             }
             break;
-        } else {
-            while(!MRFCDetectPICC());
-
-            PICC_UID uid = { .received = 0 };
-
-            while(!uid.received)
-                uid = MRFCReadPICC();
-
-            if(MRFCCheckAdminPICC_UID(&uid)) {
-              LED_RED_ON;
-              while(MRFCDetectPICC());
-              LED_RED_OFF;
-              while(!MRFCDetectPICC());
-              uid = samplePICC_UID();
-              MRFCRegisterPICC_UID(uid);
-            }
-
         }
         break;
     case P2IV_P2IFG2:
