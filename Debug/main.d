@@ -16,7 +16,6 @@ main.obj: /home/alexander/Documents/ti/ccs1110/ccs/tools/compiler/ti-cgt-msp430_
 main.obj: /home/alexander/Documents/ti/ccs1110/ccs/tools/compiler/ti-cgt-msp430_21.6.0.LTS/include/machine/_types.h
 main.obj: /home/alexander/Documents/ti/ccs1110/ccs/tools/compiler/ti-cgt-msp430_21.6.0.LTS/include/machine/_stdint.h
 main.obj: /home/alexander/Documents/ti/ccs1110/ccs/tools/compiler/ti-cgt-msp430_21.6.0.LTS/include/sys/_stdint.h
-main.obj: ../src/transient_buffer.h
 main.obj: ../src/mrfc.h
 
 ../main.c:
@@ -50,8 +49,6 @@ main.obj: ../src/mrfc.h
 /home/alexander/Documents/ti/ccs1110/ccs/tools/compiler/ti-cgt-msp430_21.6.0.LTS/include/machine/_stdint.h:
 
 /home/alexander/Documents/ti/ccs1110/ccs/tools/compiler/ti-cgt-msp430_21.6.0.LTS/include/sys/_stdint.h:
-
-../src/transient_buffer.h:
 
 ../src/mrfc.h:
 

@@ -56,7 +56,7 @@ uint8_t MRFCUnsetRegBits(uint8_t reg, uint8_t bits) {
 
 const struct _PICC_COMMANDS PCMD = { .ReqA = 0x26, .AnticollisionCL1 = 0x93 };
 
-const struct _MRFC_COMMANDS CMD = { .Idle = 0b0000, .Transceive = 0b1100, .SoftReset = 0b1111 };
+const struct _MRFC_COMMANDS CMD = { .Transceive = 0b1100, .SoftReset = 0b1111 };
 
 const struct _MRFC_REGISTERS REG = { .Command = 0x01, .ComIEn = 0x02, .ComIrq = 0x04, .FIFOData = 0x09, .FIFOLevel = 0x0A, .BitFraming = 0x0D, .Coll = 0x0E, .Mode = 0x11, .TxControl = 0x14, .TxASK = 0x15, .TMode = 0x2A, .TPrescaler = 0x2B, .TReloadHB = 0x2C, .TReloadLB = 0x2D, .Version = 0x37 };
 
@@ -134,12 +134,11 @@ void MRFCSetRegister(uint8_t reg, uint8_t value) {
     __unsetSS();
 }
 
-// sets up interruptions, clears FIFO buffer and puts module at idle state
+// sets up interruptions and clears FIFO buffer
 void __prepareTransmission(uint8_t interruptMask) {
     MRFCSetRegister(REG.ComIEn, interruptMask | 0x80);
     MRFCUnsetRegBits(REG.ComIrq, 0x80);
     MRFCSetRegBits(REG.FIFOLevel, 0x80);
-    MRFCSetRegister(REG.Command, CMD.Idle);
 }
 
 uint8_t MRFCDetectPICC() {

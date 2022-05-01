@@ -1,6 +1,5 @@
 #include <msp430.h> 
 #include <stdint.h>
-#include "src/transient_buffer.h"
 
 // Ports used: 1.3, 1.4, 3.0-2
 #include "src/mrfc.h"
@@ -17,10 +16,6 @@
 #define LED_GREEN_TOGGLE  (P4OUT ^= BIT7)
 
 void confLeds();
-
-#define S1_PRESSED ((P2IN & BIT1) == 0)
-
-void confS1();
 
 // ========================================
 // |                Alarm                 |
@@ -45,35 +40,18 @@ typedef uint8_t bool;
 uint8_t halfSecondsCounter = 0, secondsPastDetection = 0,
         shouldDeactivateAlarm = 0, shouldSoundAlarm = 0;
 
-TransientBuffer rxBuff;
-
 PICC_UID lastReadUID;
-PICC_UID samplePICC_UID();
 
 int main(void) {
     WDTCTL = WDTPW | WDTHOLD;	// stop watchdog timer
 
-    initBuffer(&rxBuff);
-
     confBuzzer();
-    confS1();
     confLeds();
     confMotionSensor();
 
     confMRFC();
 
     __enable_interrupt();
-
-    soundAlarm();
-
-    /* while (1) { */
-    /*     if (MRFCDetectPICC()) { */
-    /*         lastReadUID = MRFCReadPICC(); */
-    /*         volatile uint8_t x; */
-    /*         if(lastReadUID.received && MRFCCheckAdminPICC_UID(&lastReadUID)) */
-    /*             x = lastReadUID.size; */
-    /*     } */
-    /* } */
 
     while (1) {
         if (MOTION_DETECTED) {
@@ -127,7 +105,7 @@ void deactivateAlarmTimer() {
 
 #pragma vector = TIMER2_A0_VECTOR
 __interrupt void timer_a2_isr() {
-    if (secondsPastDetection++ == 1) {
+    if (secondsPastDetection++ == 5) {
         secondsPastDetection = 0;
         deactivateAlarmTimer();
         shouldSoundAlarm = 1;
@@ -166,32 +144,9 @@ void soundAlarm() {
     LED_GREEN_ON;
 }
 
-void confS1() {
-    P2SEL &= ~BIT1;
-    P2DIR &= ~BIT1;
-    P2REN |= BIT1;
-    P2OUT |= BIT1;
-
-    P2IE |= BIT1;
-
-    do {
-        P2IFG = 0;
-    } while (P2IFG != 0);
-}
-
-PICC_UID uidOversampling[100];
 #pragma vector = PORT2_VECTOR;
 __interrupt void s1_isr(void) {
     switch (P2IV) {
-    case P2IV_P2IFG1:
-        if(shouldSoundAlarm) {
-            if(!shouldDeactivateAlarm) {
-                shouldDeactivateAlarm = 1;
-                deactivateAlarmTimer();
-            }
-            break;
-        }
-        break;
     case P2IV_P2IFG2:
         LED_GREEN_OFF;
         initAlarmTimer();
@@ -199,51 +154,6 @@ __interrupt void s1_isr(void) {
     default:
         break;
     }
-}
-
-PICC_UID samplePICC_UID() {
-  const uint8_t sampleCount = 100;
-  uint8_t byteFrequencies[MAX_PICC_UID_SIZE][256] = {{ 0 }};
-  uint8_t sizeFrequencies[7] = { 0 };
-  uint8_t j, i;
-
-  for(i = 0; i < sampleCount; i++) {
-    LED_GREEN_OFF;
-    LED_RED_OFF;
-    while(MRFCDetectPICC());
-    LED_GREEN_ON;
-    uidOversampling[i].received = 0;
-    while(!uidOversampling[i].received) {
-      uidOversampling[i] = MRFCReadPICC();
-    }
-    LED_RED_ON;
-
-    sizeFrequencies[uidOversampling[i].size]++;
-
-    for(j = 0; j < uidOversampling[i].size; j++)
-      byteFrequencies[j][uidOversampling->data[j]]++;
-  }
-
-  uint8_t mostFrequentUIDSizeFreq = 0, mostFrequentUIDSize = 0;
-
-  for(i = 0; i < 7; i++) {
-    if(sizeFrequencies[i] > mostFrequentUIDSizeFreq)
-      mostFrequentUIDSize = i + 4;
-  }
-
-  PICC_UID mostFrequentUID = { .received = 1, .size = mostFrequentUIDSize };
-  for(j = 0; j < mostFrequentUID.size; j++) {
-    uint8_t m;
-    uint8_t mostFrequentByteFreq = 0, mostFrequentByte = 0;
-    for(m = 0; m < 256; m++) {
-      if(byteFrequencies[j][m] > mostFrequentByteFreq)
-        mostFrequentByteFreq = byteFrequencies[j][m];
-        mostFrequentByte = m;
-    }
-    mostFrequentUID.data[j] = mostFrequentByte;
-  }
-
-  return mostFrequentUID;
 }
 
 // ========================================

@@ -10,7 +10,6 @@ GEN_CMDS__FLAG :=
 ORDERED_OBJS += \
 "./main.obj" \
 "./src/mrfc.obj" \
-"./src/transient_buffer.obj" \
 "../lnk_msp430f5529.cmd" \
 $(GEN_CMDS__FLAG) \
 -llibmath.a \
@@ -157,8 +156,8 @@ labprojetofinal.hex: $(EXE_OUTPUTS)
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "main.obj" "src/mrfc.obj" "src/transient_buffer.obj" 
-	-$(RM) "main.d" "src/mrfc.d" "src/transient_buffer.d" 
+	-$(RM) "main.obj" "src/mrfc.obj" 
+	-$(RM) "main.d" "src/mrfc.d" 
 	-@echo 'Finished clean'
 	-@echo ' '
 
