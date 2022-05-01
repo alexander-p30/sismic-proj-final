@@ -1,4 +1,5 @@
 #include "mrfc.h"
+#include <stdint.h>
 
 // ========================================
 // |                  SPI                 |
@@ -53,7 +54,7 @@ uint8_t MRFCUnsetRegBits(uint8_t reg, uint8_t bits) {
     return MRFCGetRegister(reg);
 }
 
-const struct _PICC_COMMANDS PICC_COMMAND = { .ReqA = 0x26 };
+const struct _PICC_COMMANDS PICC_COMMAND = { .ReqA = 0x26, .AnticollisionCL1 = 0x93 };
 // internal alias
 const struct _PICC_COMMANDS *PCMD = &PICC_COMMAND;
 
@@ -173,6 +174,42 @@ uint8_t MRFCDetectPICC() {
 
     MRFCUnsetRegBits(REG->BitFraming, 0x80);
 
-    return (interruptReg & RX_INTERRUPT);
+    return interruptReg & RX_INTERRUPT;
+}
+
+UID MRFCReadPICC() {
+    ANTICOLLISION_CMD cmd = { .SEL = PCMD->AnticollisionCL1, .NVB = 0x20,
+                              .UID_CLn = 0 };
+    uint8_t enabledInterrupts = RX_INTERRUPT | TIMER_INTERRUPT;
+
+    MRFCUnsetRegBits(REG->Coll, 0x80);
+
+    __prepareTransmission(enabledInterrupts);
+
+    MRFCSetRegister(REG->FIFOData, cmd.SEL);
+    MRFCSetRegister(REG->FIFOData, cmd.NVB);
+
+    MRFCSetRegister(REG->Command, CMD->Transceive);
+    MRFCSetRegister(REG->BitFraming, 0x80);
+
+    uint8_t interruptReg = 0;
+    while (!(interruptReg & enabledInterrupts)) {
+        interruptReg = MRFCGetRegister(REG->ComIrq);
+    }
+
+    MRFCUnsetRegBits(REG->BitFraming, 0x80);
+
+    const uint8_t responseSize = MRFCGetRegister(REG->FIFOLevel);
+    const uint8_t resposeIsValidUID = responseSize >= MIN_UID_SIZE;
+    UID uid = { .received = resposeIsValidUID, .size =
+            resposeIsValidUID ? responseSize : 0 };
+
+    if (uid.received) {
+        uint8_t i;
+        for (i = 0; i < responseSize; i++)
+            uid.data[i] = MRFCGetRegister(REG->FIFOData);
+    }
+
+    return uid;
 }
 

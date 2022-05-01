@@ -42,8 +42,8 @@ void confMotionSensorPrepareTimer();
 
 typedef uint8_t bool;
 
-uint8_t halfSecondsCounter = 0, secondsPastDetection = 0, shouldDeactivateAlarm = 0,
-        shouldSoundAlarm = 0;
+uint8_t halfSecondsCounter = 0, secondsPastDetection = 0,
+        shouldDeactivateAlarm = 0, shouldSoundAlarm = 0;
 
 TransientBuffer rxBuff;
 
@@ -61,10 +61,12 @@ int main(void) {
 
     __enable_interrupt();
 
-    volatile int x;
-    while(1) {
-      if(MRFCDetectPICC())
-        LED_RED_TOGGLE;
+    ATQA atqa;
+    UID uid;
+    while (1) {
+        if (MRFCDetectPICC()) {
+            uid = MRFCReadPICC();
+        }
     }
 
     while (1) {
@@ -168,7 +170,7 @@ void confS1() {
 __interrupt void s1_isr(void) {
     switch (P2IV) {
     case P2IV_P2IFG1:
-        if(!shouldDeactivateAlarm) {
+        if (!shouldDeactivateAlarm) {
             shouldDeactivateAlarm = 1;
             deactivateAlarmTimer();
         }
